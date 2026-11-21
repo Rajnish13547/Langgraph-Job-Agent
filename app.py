@@ -35,15 +35,30 @@ def chat():
     message = data.get("message", "")
     thread_id = data.get("thread_id")
 
-    if thread_id:
-        # An open thread means the pipeline is mid-pause waiting on a missing
-        # field - this message is the answer, not a new submission.
-        config = {"configurable": {"thread_id": thread_id}}
-        result = graph.invoke(Command(resume=message), config=config)
-    else:
-        thread_id = str(uuid.uuid4())
-        config = {"configurable": {"thread_id": thread_id}}
-        result = graph.invoke({"raw_jd": message}, config=config)
+    try:
+        if thread_id:
+            # An open thread means the pipeline is mid-pause waiting on a missing
+            # field - this message is the answer, not a new submission.
+            config = {"configurable": {"thread_id": thread_id}}
+            result = graph.invoke(Command(resume=message), config=config)
+        else:
+            thread_id = str(uuid.uuid4())
+            config = {"configurable": {"thread_id": thread_id}}
+            result = graph.invoke({"raw_jd": message}, config=config)
+    except Exception as exc:
+        app.logger.exception("pipeline failed")
+        text = str(exc)
+        if "credit balance is too low" in text:
+            reply = (
+                "Anthropic API credit balance is too low. Add credits at "
+                "console.anthropic.com > Plans & Billing, or use an API key from "
+                "an account that has credit, then try again."
+            )
+        else:
+            reply = f"Pipeline error: {type(exc).__name__}: {text[:300]}"
+        # Echo the client's original thread_id: a failed new submission stays
+        # "new" (None), a failed mid-pause answer can be retried on its thread.
+        return jsonify({"reply": reply, "thread_id": data.get("thread_id"), "done": False}), 502
 
     if "__interrupt__" in result:
         question = result["__interrupt__"][0].value["question"]
