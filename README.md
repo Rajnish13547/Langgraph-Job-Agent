@@ -1,4 +1,5 @@
 # LangGraph Job Agent (Claude + MongoDB)
+Dashboard link: https://rajnish13547-langgraph-jobagent.onrender.com/
 
 A job-description intake pipeline built with **LangGraph** and **Claude** (Anthropic). A recruiter pastes a messy job description (JD); the pipeline extracts the key fields, asks for anything missing, rejects duplicates, scores and rewrites the text if needed, and finally publishes it to MongoDB.
 
